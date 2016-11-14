@@ -23,7 +23,7 @@ var GitHubActivity = (function() {
       if (typeof(cssClass) === 'undefined') cssClass = "";
       return methods.renderLink('https://github.com/' + url, title, cssClass);
     },
-    getMessageFor: function(data) {
+    getMessageFor: function(data, branch) {
       var p = data.payload;
       data.repoLink = methods.renderGitHubLink(data.repo.name);
       data.userGravatar = Mustache.render('<div class="gha-gravatar-user"><img src="{{url}}" class="gha-gravatar-small"></div>', { url: data.actor.avatar_url });
@@ -36,6 +36,9 @@ var GitHubActivity = (function() {
           data.branch = p.ref;
         }
         data.branchLink = methods.renderGitHubLink(data.repo.name + '/tree/' + data.branch, data.branch) + ' at ';
+        if (data.branch != branch){
+          return '';
+        }
       }
 
       // Only show the first 6 characters of the SHA of each commit if given.
@@ -157,7 +160,7 @@ var GitHubActivity = (function() {
 
       return Mustache.render(templates.UserHeader, data);
     },
-    getActivityHTML: function(data, limit) {
+    getActivityHTML: function(data, limit, branch) {
       var text = '';
       var dataLength = data.length;
       if (limit && limit > dataLength) {
@@ -169,7 +172,7 @@ var GitHubActivity = (function() {
         return Mustache.render(templates.NoActivity, {});
       }
       for (var i = 0; i < limit; i++) {
-        text += methods.getMessageFor(data[i]);
+        text += methods.getMessageFor(data[i], branch);
       }
 
       return text;
@@ -215,6 +218,7 @@ var GitHubActivity = (function() {
   };
 
   obj.feed = function(options) {
+
     if (!options.username || !options.selector) {
       throw "You must specify the username and selector options for the activity stream.";
       return false;
@@ -263,7 +267,7 @@ var GitHubActivity = (function() {
         activity = Mustache.render(templates.EventsNotFound, { username: options.username });
       } else {
         var limit = options.limit != 'undefined' ? parseInt(options.limit, 10) : null;
-        activity = methods.getActivityHTML(output, limit);
+        activity = methods.getActivityHTML(output, limit, options.branch);
       }
       methods.renderIfReady(selector, header, activity);
     });
